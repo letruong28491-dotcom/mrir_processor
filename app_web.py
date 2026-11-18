@@ -5,6 +5,7 @@ import tempfile
 import zipfile
 import base64
 import time
+from datetime import datetime
 import streamlit as st
 
 # Import core processor
@@ -18,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS cho giao diện hiện đại, thân thiện
+# Custom CSS cho giao diện hiện đại, trực quan
 st.markdown("""
 <style>
     .main-header {
@@ -52,14 +53,6 @@ st.markdown("""
         margin-left: 10px;
         vertical-align: middle;
     }
-    .folder-upload-card {
-        background: #f0f7fb;
-        border: 2px dashed #1a5276;
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        margin-bottom: 20px;
-    }
     .summary-card {
         background: #ffffff;
         border-left: 5px solid #27ae60;
@@ -67,6 +60,24 @@ st.markdown("""
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         margin-bottom: 20px;
+    }
+    .dest-card {
+        background: #eef7fc;
+        border: 1px solid #b8daff;
+        border-left: 5px solid #007bff;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .file-item {
+        background: #fdfefe;
+        border: 1px solid #e1e8ed;
+        border-radius: 8px;
+        padding: 12px 18px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
     .log-box {
         font-family: 'Consolas', 'Courier New', monospace;
@@ -90,11 +101,17 @@ DEFAULT_OUTPUT = os.path.join(BASE_DIR, "Output")
 os.makedirs(DEFAULT_INPUT, exist_ok=True)
 os.makedirs(DEFAULT_OUTPUT, exist_ok=True)
 
+# Khởi tạo session state lưu kết quả xử lý
+if "last_result_pdf" not in st.session_state:
+    st.session_state["last_result_pdf"] = None
+if "last_logs" not in st.session_state:
+    st.session_state["last_logs"] = []
+
 # Header
 st.markdown("""
 <div class="main-header">
     <h1>📑 HỆ THỐNG TỰ ĐỘNG TỔNG HỢP & TÔ MÀU HỒ SƠ MRIR <span class="badge-online">ONLINE 24/7</span></h1>
-    <p>Đưa trọn gói thư mục lô hàng (chứa file Excel và các chứng chỉ PDF) để tự động xuất Excel, lọc trang bọc ống CWC và tô màu toàn dòng MTC/IRN.</p>
+    <p>Tải lên trọn gói thư mục lô hàng để tự động xuất Excel, lọc trang bọc ống CWC và tô màu toàn dòng MTC/IRN theo chuẩn nghiệm thu.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -113,42 +130,47 @@ with st.sidebar:
         except Exception:
             pass
             
-    st.markdown("### Trạng thái Xử lý")
+    st.markdown("### ⚙️ Trạng thái Hệ thống")
     st.write(f"• **Chuyển đổi Excel:** {'✅ MS Excel COM' if has_com else '✅ LibreOffice Headless'}")
     st.write("• **Computer Vision:** ✅ OpenCV")
     st.write("• **OCR Engine:** ✅ RapidOCR ONNX")
     st.write("• **PDF Engine:** ✅ PyMuPDF (Fitz)")
     
     st.markdown("---")
-    st.markdown("### Cấu trúc Folder Lô hàng Chuẩn:")
-    st.code("""📁 Tên_Lô_Hàng/
-├── 📊 File_MRIR.xlsm (hoặc .xlsx)
-└── 📁 Cert_Tên_Lô/
-    ├── 📑 277 PT-IRN-CWC-*.pdf
-    ├── 📑 3LPE+CWC_*.pdf
-    └── 📑 MO181-IRN-*_MTC.pdf""", language="text")
+    st.markdown("### 📂 Vị Trí Lưu File Máy Chủ:")
+    st.code(f"{DEFAULT_OUTPUT}", language="text")
     
     st.markdown("---")
     st.caption("© 2026 MRIR Automation - Ready for Cloud & Production")
 
-# Tabs chức năng
-tab_folder_upload, tab_manual, tab_server = st.tabs([
-    "📦 1. Tải Lên Trọn Gói Thư Mục Lô Hàng (Khuyên Dùng)",
-    "📑 2. Tải Lẻ Từng File (Excel + PDFs)",
-    "🖥️ 3. Xử Lý Thư Mục Sẵn Có Trên Máy Chủ (Input/Output)"
+# Tạo 4 Tab chức năng
+tab_folder_upload, tab_output_manager, tab_manual, tab_server = st.tabs([
+    "📦 1. Tải Lên Thư Mục Lô Hàng (Xử Lý)",
+    "📁 2. Kho File Kết Quả Đã Xuất (Output)",
+    "📑 3. Tải Lẻ Từng File",
+    "🖥️ 4. Xử Lý Thư Mục Máy Chủ"
 ])
 
 # ==========================================================
-# TAB 1: TẢI TRỌN GÓI THƯ MỤC LÔ HÀNG (ZIP HOẶC MULTI-FILE)
+# TAB 1: TẢI TRỌN GÓI THƯ MỤC LÔ HÀNG
 # ==========================================================
 with tab_folder_upload:
     st.markdown("### 📥 Đưa Trọn Gói Thư Mục Lô Hàng Vào Hệ Thống")
-    st.write("Bạn chỉ cần tải lên **1 thư mục lô hàng duy nhất** (y hệt như cách dùng tool trên máy tính). Hệ thống sẽ tự động quét, nhận diện file Excel và toàn bộ chứng chỉ PDF.")
+    st.write("Bạn chỉ cần đưa **1 thư mục lô hàng duy nhất** (y hệt như cách dùng tool trên máy tính). Hệ thống tự động quét nhận diện file Excel và các chứng chỉ PDF.")
+    
+    # Hộp thông tin vị trí lưu file giải đáp thắc mắc người dùng
+    st.markdown("""
+    <div class="dest-card">
+        <b>💡 Vị trí lưu file sau khi xuất xong:</b><br>
+        1. <b>Trên máy chủ Web:</b> File PDF hoàn chỉnh được lưu tự động tại thư mục <code>Output/</code>.<br>
+        2. <b>Về máy tính của bạn:</b> Sau khi xử lý xong, màn hình sẽ hiện nút <b>📥 TẢI VỀ FILE PDF KẾT QUẢ</b>. Khi bấm nút này, file sẽ tự động tải về thư mục <b>Downloads (Tải về)</b> hoặc vị trí lưu tùy chọn trên máy tính của bạn.
+    </div>
+    """, unsafe_allow_html=True)
     
     upload_type = st.radio(
         "Hình thức tải thư mục lô hàng:",
         [
-            "📁 Cách 1: Tải lên file nén .ZIP của Thư mục Lô Hàng (Khuyên dùng - nhanh & gọn nhất)",
+            "📁 Cách 1: Tải file nén .ZIP của Thư mục Lô Hàng (Khuyên dùng - nhanh & gọn nhất)",
             "📂 Cách 2: Kéo thả tất cả các file trong thư mục lô hàng vào đây (Ctrl+A chọn hết)"
         ],
         horizontal=False
@@ -160,7 +182,7 @@ with tab_folder_upload:
     found_pdfs = []
     
     if "Cách 1" in upload_type:
-        st.info("💡 **Mẹo:** Trên máy tính, bạn chỉ cần nhấp chuột phải vào Thư mục Lô hàng -> chọn **Compress to ZIP file** (hoặc Send to -> Compressed (zipped) folder), sau đó kéo thả file `.zip` đó vào ô bên dưới.")
+        st.info("💡 **Cách làm:** Nhấp chuột phải vào Thư mục Lô hàng trên máy -> chọn **Compress to ZIP file** (hoặc Send to -> Compressed folder), sau đó kéo thả file `.zip` đó vào ô bên dưới.")
         uploaded_zip = st.file_uploader(
             "Kéo thả hoặc Chọn file .ZIP của Thư mục Lô hàng:",
             type=["zip"],
@@ -172,14 +194,13 @@ with tab_folder_upload:
             with open(zip_dest, "wb") as f:
                 f.write(uploaded_zip.getbuffer())
                 
-            # Giải nén
             with zipfile.ZipFile(zip_dest, 'r') as z:
                 z.extractall(temp_dir)
                 
             work_dir = temp_dir
             batch_name = os.path.splitext(uploaded_zip.name)[0]
     else:
-        st.info("💡 **Mẹo:** Bạn mở thư mục Lô hàng trên máy, bấm `Ctrl + A` để chọn toàn bộ các file (file Excel và các file PDF), rồi kéo thả chung vào ô bên dưới.")
+        st.info("💡 **Cách làm:** Mở thư mục Lô hàng trên máy, bấm `Ctrl + A` chọn toàn bộ các file (Excel + PDF), rồi kéo thả chung vào ô bên dưới.")
         uploaded_files = st.file_uploader(
             "Kéo thả toàn bộ các file trong thư mục lô hàng vào đây:",
             type=["xlsm", "xlsx", "pdf"],
@@ -214,7 +235,6 @@ with tab_folder_upload:
                     if f.lower().endswith(".pdf"):
                         found_pdfs.append(f)
                         
-        # Hiển thị thẻ tóm tắt kiểm tra dữ liệu đầu vào
         st.markdown(f"""
         <div class="summary-card">
             <h4>📋 KẾT QUẢ QUÉT THƯ MỤC ĐẦU VÀO:</h4>
@@ -225,7 +245,6 @@ with tab_folder_upload:
         </div>
         """, unsafe_allow_html=True)
         
-        # Nút bấm bắt đầu xử lý
         btn_process = st.button("🚀 BẮT ĐẦU XỬ LÝ LÔ HÀNG & TẠO FILE PDF HOÀN CHỈNH", type="primary", use_container_width=True)
         
         if btn_process:
@@ -249,50 +268,124 @@ with tab_folder_upload:
                     live_logger(f"🚀 Bắt đầu xử lý trọn gói lô hàng: {batch_name}...")
                     p_bar.progress(0.15)
                     
-                    # Tiến hành xử lý
+                    # Tiến hành xử lý và lưu vào Output
                     res_pdf = processor.process_batch(work_dir, DEFAULT_OUTPUT)
                     p_bar.progress(1.0)
                     
+                    # Lưu vào session state
+                    st.session_state["last_result_pdf"] = res_pdf
+                    st.session_state["last_logs"] = runtime_logs
+                    
                     st.success("🎉 XỬ LÝ THÀNH CÔNG! ĐÃ TẠO FILE PDF TỔNG HỢP HOÀN TẤT.")
                     
-                    if os.path.exists(res_pdf):
-                        pdf_size_mb = os.path.getsize(res_pdf) / (1024 * 1024)
-                        pdf_basename = os.path.basename(res_pdf)
-                        
-                        st.markdown(f"""
-                        <div class="summary-card" style="border-left-color: #2980b9;">
-                            <h4>📄 THÔNG TIN FILE PDF KẾT QUẢ</h4>
-                            • <b>Tên file:</b> <code>{pdf_basename}</code><br>
-                            • <b>Dung lượng:</b> <b>{pdf_size_mb:.2f} MB</b><br>
-                            • <b>Trạng thái:</b> Đã ghép Excel, lọc trang CWC, đính kèm phiếu xuất ống IRN CWC và tô màu toàn dòng MTC/IRN PVP đầy đủ.
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        with open(res_pdf, "rb") as rf:
-                            pdf_bytes = rf.read()
-                            
-                        # Nút tải file về
-                        st.download_button(
-                            label=f"📥 TẢI VỀ FILE PDF KẾT QUẢ ({pdf_basename})",
-                            data=pdf_bytes,
-                            file_name=pdf_basename,
-                            mime="application/pdf",
-                            type="primary",
-                            use_container_width=True
-                        )
-                        
-                        # Xem trước PDF
-                        st.markdown("#### 👁️ Xem Trước Bản In PDF Trực Tiếp:")
-                        b64_str = base64.b64encode(pdf_bytes).decode('utf-8')
-                        st.markdown(f'<iframe src="data:application/pdf;base64,{b64_str}" width="100%" height="800" type="application/pdf" style="border-radius: 8px; border: 1px solid #ccc;"></iframe>', unsafe_allow_html=True)
-                        
                 except Exception as ex:
                     p_bar.progress(1.0)
                     st.error(f"❌ Xảy ra lỗi trong quá trình xử lý: {str(ex)}")
                     live_logger(f"LỖI: {str(ex)}")
 
+    # Hiển thị kết quả xử lý nếu đã có
+    if st.session_state["last_result_pdf"] and os.path.exists(st.session_state["last_result_pdf"]):
+        res_pdf = st.session_state["last_result_pdf"]
+        pdf_size_mb = os.path.getsize(res_pdf) / (1024 * 1024)
+        pdf_basename = os.path.basename(res_pdf)
+        
+        st.markdown(f"""
+        <div class="summary-card" style="border-left-color: #2980b9;">
+            <h4>📄 FILE PDF HOÀN CHỈNH ĐÃ SẴN SÀNG</h4>
+            • <b>Tên file kết quả:</b> <code>{pdf_basename}</code><br>
+            • <b>Dung lượng:</b> <b>{pdf_size_mb:.2f} MB</b><br>
+            • <b>Vị trí lưu trên máy chủ:</b> <code>{res_pdf}</code><br>
+            • <b>Trạng thái:</b> Đã ghép Excel, lọc trang CWC, đính kèm phiếu xuất ống IRN CWC và tô màu toàn dòng MTC/IRN PVP.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with open(res_pdf, "rb") as rf:
+            pdf_bytes = rf.read()
+            
+        # Nút tải file về máy tính cá nhân
+        st.download_button(
+            label=f"📥 TẢI VỀ FILE PDF KẾT QUẢ VỀ MÁY TÍNH CỦA BẠN ({pdf_basename})",
+            data=pdf_bytes,
+            file_name=pdf_basename,
+            mime="application/pdf",
+            type="primary",
+            use_container_width=True
+        )
+        st.caption("👉 Sau khi bấm nút tải về, file sẽ nằm trong thư mục **Downloads (Tải về)** của máy tính bạn.")
+        
+        # Xem trước PDF
+        st.markdown("#### 👁️ Xem Trước Bản In PDF Trực Tiếp:")
+        b64_str = base64.b64encode(pdf_bytes).decode('utf-8')
+        st.markdown(f'<iframe src="data:application/pdf;base64,{b64_str}" width="100%" height="800" type="application/pdf" style="border-radius: 8px; border: 1px solid #ccc;"></iframe>', unsafe_allow_html=True)
+
 # ==========================================================
-# TAB 2: TẢI LẺ TỪNG FILE (NẾU CẦN)
+# TAB 2: KHO FILE KẾT QUẢ ĐÃ XUẤT (OUTPUT MANAGER)
+# ==========================================================
+with tab_output_manager:
+    st.markdown("### 📁 Kho Lưu Trữ & Quản Lý File Kết Quả Đã Xuất (Output)")
+    st.write(f"Tất cả các file PDF sau khi xuất hoàn thành đều được lưu trữ tập trung tại thư mục **`Output`** trên hệ thống.")
+    
+    # Lấy danh sách file trong thư mục Output
+    out_files = []
+    if os.path.exists(DEFAULT_OUTPUT):
+        for f in os.listdir(DEFAULT_OUTPUT):
+            if f.lower().endswith(".pdf"):
+                full_p = os.path.join(DEFAULT_OUTPUT, f)
+                f_stat = os.stat(full_p)
+                out_files.append({
+                    "name": f,
+                    "path": full_p,
+                    "size_mb": f_stat.st_size / (1024 * 1024),
+                    "mtime": datetime.fromtimestamp(f_stat.st_mtime).strftime("%d/%m/%Y %H:%M:%S"),
+                    "raw_time": f_stat.st_mtime
+                })
+        out_files.sort(key=lambda x: x["raw_time"], reverse=True)
+        
+    if not out_files:
+        st.info("ℹ️ Hiện chưa có file PDF nào trong thư mục Output. Hãy tải lên và xử lý lô hàng ở Tab 1 để tạo file kết quả.")
+    else:
+        st.success(f"🔍 Tìm thấy **{len(out_files)} file PDF** kết quả trong kho lưu trữ Output:")
+        
+        # Nút tải toàn bộ dưới dạng file ZIP
+        col_dl_all, col_refresh = st.columns([2, 1])
+        with col_dl_all:
+            # Tạo file zip tạm chứa toàn bộ các file output
+            zip_all_path = os.path.join(tempfile.gettempdir(), "Tat_Ca_File_MRIR_Highlighted.zip")
+            with zipfile.ZipFile(zip_all_path, 'w', zipfile.ZIP_DEFLATED) as zip_out:
+                for of in out_files:
+                    zip_out.write(of["path"], of["name"])
+            with open(zip_all_path, "rb") as zf:
+                st.download_button(
+                    label="📦 TẢI VỀ TOÀN BỘ CÁC FILE TRONG KHO (.ZIP)",
+                    data=zf.read(),
+                    file_name="Tat_Ca_File_MRIR_Highlighted.zip",
+                    mime="application/zip"
+                )
+        with col_refresh:
+            if st.button("🔄 Làm mới danh sách"):
+                st.rerun()
+                
+        st.markdown("---")
+        
+        # Danh sách từng file kết quả
+        for idx, of in enumerate(out_files, 1):
+            col_info, col_btn = st.columns([3, 1])
+            with col_info:
+                st.markdown(f"**{idx}. 📄 `{of['name']}`**")
+                st.caption(f"Dung lượng: **{of['size_mb']:.2f} MB** | Thời gian xuất: **{of['mtime']}**")
+            with col_btn:
+                with open(of["path"], "rb") as cur_f:
+                    st.download_button(
+                        label="📥 Tải về máy",
+                        data=cur_f.read(),
+                        file_name=of["name"],
+                        mime="application/pdf",
+                        key=f"dl_tab2_{idx}"
+                    )
+            st.divider()
+
+# ==========================================================
+# TAB 3: TẢI LẺ TỪNG FILE
 # ==========================================================
 with tab_manual:
     st.markdown("### 📑 Tải Lên Riêng Lẻ Từng Phần")
@@ -349,7 +442,7 @@ with tab_manual:
                 st.error(f"Lỗi: {e}")
 
 # ==========================================================
-# TAB 3: XỬ LÝ THEO THƯ MỤC TRÊN MÁY CHỦ (SERVER FOLDER)
+# TAB 4: XỬ LÝ THEO THƯ MỤC TRÊN MÁY CHỦ (SERVER FOLDER)
 # ==========================================================
 with tab_server:
     st.markdown("### 🖥️ Xử Lý Theo Thư Mục Cục Bộ Trên Máy / Server")
