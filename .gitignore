@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Output and build directories
+Output/
+temp_build/
+temp_proc/
+MRIR_PORTABLE/
+MRIR_PORTABLE.zip
+
+# Excel temp files
+~$*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+cloudflared.exe
