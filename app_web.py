@@ -18,20 +18,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS cho giao diện hiện đại, chuyên nghiệp
+# Custom CSS cho giao diện hiện đại, thân thiện
 st.markdown("""
 <style>
     .main-header {
         background: linear-gradient(135deg, #0f2b48 0%, #1a5276 100%);
-        padding: 24px 30px;
+        padding: 22px 28px;
         border-radius: 12px;
         color: white;
-        margin-bottom: 25px;
+        margin-bottom: 22px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.12);
     }
     .main-header h1 {
         color: #ffffff;
-        font-size: 26px;
+        font-size: 25px;
         font-weight: 700;
         margin: 0;
         letter-spacing: -0.5px;
@@ -52,12 +52,21 @@ st.markdown("""
         margin-left: 10px;
         vertical-align: middle;
     }
-    .stat-card {
-        background: #f8f9fa;
-        border-left: 4px solid #1a5276;
-        padding: 15px;
-        border-radius: 6px;
-        margin-bottom: 15px;
+    .folder-upload-card {
+        background: #f0f7fb;
+        border: 2px dashed #1a5276;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .summary-card {
+        background: #ffffff;
+        border-left: 5px solid #27ae60;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        margin-bottom: 20px;
     }
     .log-box {
         font-family: 'Consolas', 'Courier New', monospace;
@@ -65,7 +74,7 @@ st.markdown("""
         color: #d4d4d4;
         padding: 15px;
         border-radius: 8px;
-        max-height: 400px;
+        max-height: 420px;
         overflow-y: auto;
         font-size: 13px;
         line-height: 1.5;
@@ -84,18 +93,18 @@ os.makedirs(DEFAULT_OUTPUT, exist_ok=True)
 # Header
 st.markdown("""
 <div class="main-header">
-    <h1>📑 HỆ THỐNG TỰ ĐỘNG TỔNG HỢP & TÔ MÀU HỒ SƠ MRIR <span class="badge-online">WEB ONLINE v2.0</span></h1>
-    <p>Tự động hóa 100% quy trình đọc Excel RFI/MRIR, lọc trang bọc ống CWC và tô màu toàn dòng MTC/IRN theo chuẩn nghiệm thu dầu khí & công nghiệp.</p>
+    <h1>📑 HỆ THỐNG TỰ ĐỘNG TỔNG HỢP & TÔ MÀU HỒ SƠ MRIR <span class="badge-online">ONLINE 24/7</span></h1>
+    <p>Đưa trọn gói thư mục lô hàng (chứa file Excel và các chứng chỉ PDF) để tự động xuất Excel, lọc trang bọc ống CWC và tô màu toàn dòng MTC/IRN.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar thông tin hệ thống
+# Sidebar
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/document.png", width=64)
+    st.image("https://img.icons8.com/fluency/96/folder-invoices.png", width=64)
     st.title("Thông Tin Hệ Thống")
-    st.info("🔹 **Chế độ:** Web & Cloud Ready\n🔹 **Hệ điều hành:** " + sys.platform.upper())
+    st.info("🔹 **Chế độ:** Web Cloud Online\n🔹 **Hệ điều hành:** " + sys.platform.upper())
     
-    # Kiểm tra các module
+    # Kiểm tra môi trường
     has_com = False
     if sys.platform == "win32":
         try:
@@ -104,288 +113,272 @@ with st.sidebar:
         except Exception:
             pass
             
-    st.markdown("### Trạng thái Môi trường")
-    st.write(f"• **Microsoft Excel COM:** {'✅ Sẵn sàng' if has_com else '⚠️ Không có (Dùng PDF fallback)'}")
+    st.markdown("### Trạng thái Xử lý")
+    st.write(f"• **Chuyển đổi Excel:** {'✅ MS Excel COM' if has_com else '✅ LibreOffice Headless'}")
     st.write("• **Computer Vision:** ✅ OpenCV")
     st.write("• **OCR Engine:** ✅ RapidOCR ONNX")
-    st.write("• **PDF Processor:** ✅ PyMuPDF (Fitz)")
+    st.write("• **PDF Engine:** ✅ PyMuPDF (Fitz)")
     
     st.markdown("---")
-    st.markdown("### Thư mục Mặc định")
-    st.code(f"Input: {DEFAULT_INPUT}\nOutput: {DEFAULT_OUTPUT}")
+    st.markdown("### Cấu trúc Folder Lô hàng Chuẩn:")
+    st.code("""📁 Tên_Lô_Hàng/
+├── 📊 File_MRIR.xlsm (hoặc .xlsx)
+└── 📁 Cert_Tên_Lô/
+    ├── 📑 277 PT-IRN-CWC-*.pdf
+    ├── 📑 3LPE+CWC_*.pdf
+    └── 📑 MO181-IRN-*_MTC.pdf""", language="text")
     
     st.markdown("---")
-    st.caption("© 2026 MRIR Automation System - Sẵn sàng chạy Online")
+    st.caption("© 2026 MRIR Automation - Ready for Cloud & Production")
 
-# Tạo các Tabs chức năng
-tab_upload, tab_folder, tab_guide = st.tabs([
-    "🌐 Tải File Trực Tuyến (Web Upload)",
-    "📁 Xử Lý Theo Thư Mục Máy Chủ (Server Folder)",
-    "☁️ Hướng Dẫn Đưa Lên Online (Deploy Guide)"
+# Tabs chức năng
+tab_folder_upload, tab_manual, tab_server = st.tabs([
+    "📦 1. Tải Lên Trọn Gói Thư Mục Lô Hàng (Khuyên Dùng)",
+    "📑 2. Tải Lẻ Từng File (Excel + PDFs)",
+    "🖥️ 3. Xử Lý Thư Mục Sẵn Có Trên Máy Chủ (Input/Output)"
 ])
 
 # ==========================================================
-# TAB 1: WEB UPLOAD
+# TAB 1: TẢI TRỌN GÓI THƯ MỤC LÔ HÀNG (ZIP HOẶC MULTI-FILE)
 # ==========================================================
-with tab_upload:
-    st.markdown("### 📤 Tải Lên Hồ Sơ Lô Hàng Để Xử Lý")
-    st.write("Dành cho người dùng truy cập từ trình duyệt Web (máy tính hoặc điện thoại): Tải lên file Excel và các file chứng chỉ PDF.")
+with tab_folder_upload:
+    st.markdown("### 📥 Đưa Trọn Gói Thư Mục Lô Hàng Vào Hệ Thống")
+    st.write("Bạn chỉ cần tải lên **1 thư mục lô hàng duy nhất** (y hệt như cách dùng tool trên máy tính). Hệ thống sẽ tự động quét, nhận diện file Excel và toàn bộ chứng chỉ PDF.")
     
-    col1, col2 = st.columns([1, 1])
+    upload_type = st.radio(
+        "Hình thức tải thư mục lô hàng:",
+        [
+            "📁 Cách 1: Tải lên file nén .ZIP của Thư mục Lô Hàng (Khuyên dùng - nhanh & gọn nhất)",
+            "📂 Cách 2: Kéo thả tất cả các file trong thư mục lô hàng vào đây (Ctrl+A chọn hết)"
+        ],
+        horizontal=False
+    )
     
-    with col1:
-        st.subheader("1. File Excel Lô hàng")
-        uploaded_excel = st.file_uploader(
-            "Chọn file Excel của lô (.xlsm hoặc .xlsx):",
-            type=["xlsm", "xlsx"],
-            key="excel_uploader"
+    work_dir = None
+    batch_name = "Lô hàng"
+    found_excel = None
+    found_pdfs = []
+    
+    if "Cách 1" in upload_type:
+        st.info("💡 **Mẹo:** Trên máy tính, bạn chỉ cần nhấp chuột phải vào Thư mục Lô hàng -> chọn **Compress to ZIP file** (hoặc Send to -> Compressed (zipped) folder), sau đó kéo thả file `.zip` đó vào ô bên dưới.")
+        uploaded_zip = st.file_uploader(
+            "Kéo thả hoặc Chọn file .ZIP của Thư mục Lô hàng:",
+            type=["zip"],
+            key="zip_batch_uploader"
         )
-        if uploaded_excel:
-            st.success(f"Đã chọn: **{uploaded_excel.name}** ({uploaded_excel.size / 1024:.1f} KB)")
-            
-        uploaded_excel_pdf = st.file_uploader(
-            "(Tùy chọn) File PDF xuất từ Excel nếu chạy trên máy chủ không có Microsoft Excel:",
-            type=["pdf"],
-            key="excel_pdf_uploader",
-            help="Nếu server chạy Linux/Cloud không có Microsoft Excel, bạn có thể tải kèm file PDF đã xuất từ Excel tại đây."
+        if uploaded_zip:
+            temp_dir = tempfile.mkdtemp(prefix="mrir_batch_zip_")
+            zip_dest = os.path.join(temp_dir, uploaded_zip.name)
+            with open(zip_dest, "wb") as f:
+                f.write(uploaded_zip.getbuffer())
+                
+            # Giải nén
+            with zipfile.ZipFile(zip_dest, 'r') as z:
+                z.extractall(temp_dir)
+                
+            work_dir = temp_dir
+            batch_name = os.path.splitext(uploaded_zip.name)[0]
+    else:
+        st.info("💡 **Mẹo:** Bạn mở thư mục Lô hàng trên máy, bấm `Ctrl + A` để chọn toàn bộ các file (file Excel và các file PDF), rồi kéo thả chung vào ô bên dưới.")
+        uploaded_files = st.file_uploader(
+            "Kéo thả toàn bộ các file trong thư mục lô hàng vào đây:",
+            type=["xlsm", "xlsx", "pdf"],
+            accept_multiple_files=True,
+            key="multi_files_uploader"
         )
-
-    with col2:
-        st.subheader("2. File Chứng chỉ PDF (Cert)")
-        upload_mode = st.radio(
-            "Cách tải chứng chỉ:",
-            ["Tải nhiều file PDF cùng lúc", "Tải 1 file nén .ZIP (chứa toàn bộ chứng chỉ)"],
-            horizontal=True
-        )
-        
-        uploaded_certs = []
-        uploaded_zip = None
-        
-        if upload_mode == "Tải nhiều file PDF cùng lúc":
-            uploaded_certs = st.file_uploader(
-                "Chọn các file chứng chỉ PDF (CWC, IRN CWC, MTC PVP):",
-                type=["pdf"],
-                accept_multiple_files=True,
-                key="certs_uploader"
-            )
-            if uploaded_certs:
-                st.info(f"Đã chọn **{len(uploaded_certs)}** file PDF chứng chỉ.")
-        else:
-            uploaded_zip = st.file_uploader(
-                "Chọn file ZIP chứa thư mục chứng chỉ:",
-                type=["zip"],
-                key="zip_uploader"
-            )
-            if uploaded_zip:
-                st.info(f"Đã chọn: **{uploaded_zip.name}** ({uploaded_zip.size / (1024*1024):.2f} MB)")
-
-    st.markdown("---")
-    
-    # Nút bắt đầu xử lý
-    btn_start_upload = st.button("🚀 BẮT ĐẦU XỬ LÝ & TẠO FILE PDF HOÀN CHỈNH", type="primary", use_container_width=True)
-    
-    if btn_start_upload:
-        if not uploaded_excel:
-            st.error("❌ Vui lòng chọn file Excel của lô hàng trước khi xử lý!")
-        elif not uploaded_certs and not uploaded_zip:
-            st.error("❌ Vui lòng chọn các file chứng chỉ PDF hoặc tải lên file ZIP!")
-        else:
-            # Tạo thư mục làm việc tạm thời
-            temp_work_dir = tempfile.mkdtemp(prefix="mrir_web_")
-            cert_temp_dir = os.path.join(temp_work_dir, "Cert_Web")
-            os.makedirs(cert_temp_dir, exist_ok=True)
+        if uploaded_files:
+            temp_dir = tempfile.mkdtemp(prefix="mrir_batch_multi_")
+            cert_sub_dir = os.path.join(temp_dir, "Cert_Files")
+            os.makedirs(cert_sub_dir, exist_ok=True)
             
-            # Lưu file Excel
-            saved_excel_path = os.path.join(temp_work_dir, uploaded_excel.name)
-            with open(saved_excel_path, "wb") as f:
-                f.write(uploaded_excel.getbuffer())
-                
-            # Lưu file PDF Excel (nếu có)
-            if uploaded_excel_pdf:
-                saved_excel_pdf = os.path.splitext(saved_excel_path)[0] + ".pdf"
-                with open(saved_excel_pdf, "wb") as f:
-                    f.write(uploaded_excel_pdf.getbuffer())
-                    
-            # Lưu các chứng chỉ
-            if uploaded_zip:
-                zip_path = os.path.join(temp_work_dir, "upload.zip")
-                with open(zip_path, "wb") as f:
-                    f.write(uploaded_zip.getbuffer())
-                with zipfile.ZipFile(zip_path, 'r') as zf:
-                    zf.extractall(cert_temp_dir)
-            else:
-                for c_file in uploaded_certs:
-                    target_p = os.path.join(cert_temp_dir, c_file.name)
-                    with open(target_p, "wb") as f:
-                        f.write(c_file.getbuffer())
-
-            # Giao diện Live Logs
-            st.markdown("#### 📝 Nhật ký Xử lý Trực tiếp:")
-            log_container = st.empty()
-            progress_bar = st.progress(0.0)
-            
-            logs = []
-            def web_logger(msg):
-                logs.append(msg)
-                # Hiển thị log
-                log_container.markdown(f'<div class="log-box">{"<br>".join(logs[-15:])}</div>', unsafe_allow_html=True)
-                
-            processor = MRIRBatchProcessor(logger=web_logger)
-            
-            try:
-                web_logger("🚀 Khởi động luồng xử lý Web...")
-                progress_bar.progress(0.15)
-                
-                # Chạy xử lý
-                final_pdf = processor.process_batch(temp_work_dir, DEFAULT_OUTPUT)
-                progress_bar.progress(1.0)
-                
-                st.success("🎉 XỬ LÝ THÀNH CÔNG HỒ SƠ MRIR!")
-                
-                # Hiển thị kết quả & tải file
-                if os.path.exists(final_pdf):
-                    file_size_mb = os.path.getsize(final_pdf) / (1024 * 1024)
-                    file_name = os.path.basename(final_pdf)
-                    
-                    st.markdown(f"""
-                    <div class="stat-card">
-                        <h4>📄 Thông tin File Kết quả</h4>
-                        <b>Tên file:</b> {file_name}<br>
-                        <b>Dung lượng:</b> {file_size_mb:.2f} MB<br>
-                        <b>Đường dẫn lưu trên máy:</b> <code>{final_pdf}</code>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    with open(final_pdf, "rb") as f:
-                        pdf_bytes = f.read()
-                        
-                    # Nút tải file
-                    st.download_button(
-                        label=f"📥 TẢI VỀ FILE PDF KẾT QUẢ ({file_name})",
-                        data=pdf_bytes,
-                        file_name=file_name,
-                        mime="application/pdf",
-                        type="primary"
-                    )
-                    
-                    # Xem trước file PDF trực tiếp trên web
-                    st.markdown("#### 👁️ Xem Trước PDF Trực Tiếp:")
-                    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-                    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="750" type="application/pdf" style="border-radius: 8px; border: 1px solid #ddd;"></iframe>'
-                    st.markdown(pdf_display, unsafe_allow_html=True)
-                    
-            except Exception as e:
-                progress_bar.progress(1.0)
-                st.error(f"❌ Đã xảy ra lỗi trong quá trình xử lý: {str(e)}")
-                web_logger(f"LỖI: {str(e)}")
-
-# ==========================================================
-# TAB 2: FOLDER BATCH (LOCAL / SERVER FOLDER)
-# ==========================================================
-with tab_folder:
-    st.markdown("### 📁 Xử Lý Hồ Sơ Theo Thư Mục Máy Chủ")
-    st.write("Sử dụng khi bạn đã sao chép các lô hàng vào thư mục `Input` trên máy hoặc ổ đĩa mạng nội bộ.")
-    
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        input_dir_val = st.text_input("Đường dẫn Thư mục Input:", value=DEFAULT_INPUT)
-    with col_f2:
-        output_dir_val = st.text_input("Đường dẫn Thư mục Output:", value=DEFAULT_OUTPUT)
-        
-    scan_all_opt = st.checkbox("Tự động quét và xử lý TẤT CẢ các thư mục lô hàng con tìm thấy trong Input", value=True)
-    
-    btn_start_folder = st.button("🚀 XỬ LÝ THEO THƯ MỤC TRÊN MÁY", key="btn_folder", type="primary")
-    
-    if btn_start_folder:
-        if not os.path.exists(input_dir_val):
-            st.error(f"❌ Thư mục Input không tồn tại: {input_dir_val}")
-        else:
-            st.markdown("#### 📝 Nhật ký Xử lý:")
-            f_log_container = st.empty()
-            f_progress = st.progress(0.1)
-            f_logs = []
-            
-            def folder_logger(msg):
-                f_logs.append(msg)
-                f_log_container.markdown(f'<div class="log-box">{"<br>".join(f_logs[-15:])}</div>', unsafe_allow_html=True)
-                
-            f_processor = MRIRBatchProcessor(logger=folder_logger)
-            try:
-                if scan_all_opt:
-                    res_files = f_processor.process_all_batches(input_dir_val, output_dir_val)
+            for uf in uploaded_files:
+                if uf.name.lower().endswith(('.xlsm', '.xlsx')):
+                    dest = os.path.join(temp_dir, uf.name)
                 else:
-                    res = f_processor.process_batch(input_dir_val, output_dir_val)
-                    res_files = [res]
+                    dest = os.path.join(cert_sub_dir, uf.name)
+                with open(dest, "wb") as f:
+                    f.write(uf.getbuffer())
                     
-                f_progress.progress(1.0)
-                st.success(f"🎉 Đã hoàn tất xử lý! Tạo thành công {len(res_files)} file kết quả.")
+            work_dir = temp_dir
+            batch_name = "Lô Hàng Đã Tải Lên"
+
+    # Kiểm tra dữ liệu trong thư mục đã nhận
+    if work_dir:
+        checker = MRIRBatchProcessor()
+        found_excel = checker.find_excel_file(work_dir)
+        found_cert_dir = checker.find_cert_dir(work_dir, found_excel)
+        
+        if found_cert_dir and os.path.exists(found_cert_dir):
+            for root, dirs, files in os.walk(found_cert_dir):
+                for f in files:
+                    if f.lower().endswith(".pdf"):
+                        found_pdfs.append(f)
+                        
+        # Hiển thị thẻ tóm tắt kiểm tra dữ liệu đầu vào
+        st.markdown(f"""
+        <div class="summary-card">
+            <h4>📋 KẾT QUẢ QUÉT THƯ MỤC ĐẦU VÀO:</h4>
+            • <b>Tên lô hàng:</b> <code>{batch_name}</code><br>
+            • <b>File Excel nhận diện:</b> {f'<span style="color:green; font-weight:bold;">✅ {os.path.basename(found_excel)}</span>' if found_excel else '<span style="color:red; font-weight:bold;">❌ Không tìm thấy file Excel (.xlsm/.xlsx)</span>'}<br>
+            • <b>Thư mục chứng chỉ:</b> {f'<span style="color:green; font-weight:bold;">✅ {os.path.basename(found_cert_dir)}</span>' if found_cert_dir else '<span style="color:red; font-weight:bold;">❌ Không tìm thấy</span>'}<br>
+            • <b>Số lượng file PDF chứng chỉ tìm thấy:</b> <b>{len(found_pdfs)} files</b> (CWC, IRN CWC, MTC PVP)
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Nút bấm bắt đầu xử lý
+        btn_process = st.button("🚀 BẮT ĐẦU XỬ LÝ LÔ HÀNG & TẠO FILE PDF HOÀN CHỈNH", type="primary", use_container_width=True)
+        
+        if btn_process:
+            if not found_excel:
+                st.error("❌ Không thể xử lý vì thư mục tải lên chưa có file Excel (.xlsm hoặc .xlsx)!")
+            elif len(found_pdfs) == 0:
+                st.error("❌ Không thể xử lý vì không tìm thấy file chứng chỉ PDF nào trong thư mục!")
+            else:
+                st.markdown("#### 📝 Nhật ký Xử lý Trực tiếp:")
+                log_box = st.empty()
+                p_bar = st.progress(0.05)
+                runtime_logs = []
                 
-                for r_path in res_files:
-                    if os.path.exists(r_path):
-                        r_name = os.path.basename(r_path)
-                        with open(r_path, "rb") as rf:
-                            st.download_button(
-                                label=f"📥 Tải về: {r_name} ({os.path.getsize(r_path)/(1024*1024):.2f} MB)",
-                                data=rf.read(),
-                                file_name=r_name,
-                                mime="application/pdf",
-                                key=f"dl_{r_name}"
-                            )
-            except Exception as e:
-                f_progress.progress(1.0)
-                st.error(f"❌ Lỗi: {str(e)}")
-                folder_logger(f"LỖI: {str(e)}")
+                def live_logger(msg):
+                    runtime_logs.append(msg)
+                    log_box.markdown(f'<div class="log-box">{"<br>".join(runtime_logs[-16:])}</div>', unsafe_allow_html=True)
+                    
+                processor = MRIRBatchProcessor(logger=live_logger)
+                
+                try:
+                    live_logger(f"🚀 Bắt đầu xử lý trọn gói lô hàng: {batch_name}...")
+                    p_bar.progress(0.15)
+                    
+                    # Tiến hành xử lý
+                    res_pdf = processor.process_batch(work_dir, DEFAULT_OUTPUT)
+                    p_bar.progress(1.0)
+                    
+                    st.success("🎉 XỬ LÝ THÀNH CÔNG! ĐÃ TẠO FILE PDF TỔNG HỢP HOÀN TẤT.")
+                    
+                    if os.path.exists(res_pdf):
+                        pdf_size_mb = os.path.getsize(res_pdf) / (1024 * 1024)
+                        pdf_basename = os.path.basename(res_pdf)
+                        
+                        st.markdown(f"""
+                        <div class="summary-card" style="border-left-color: #2980b9;">
+                            <h4>📄 THÔNG TIN FILE PDF KẾT QUẢ</h4>
+                            • <b>Tên file:</b> <code>{pdf_basename}</code><br>
+                            • <b>Dung lượng:</b> <b>{pdf_size_mb:.2f} MB</b><br>
+                            • <b>Trạng thái:</b> Đã ghép Excel, lọc trang CWC, đính kèm phiếu xuất ống IRN CWC và tô màu toàn dòng MTC/IRN PVP đầy đủ.
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        with open(res_pdf, "rb") as rf:
+                            pdf_bytes = rf.read()
+                            
+                        # Nút tải file về
+                        st.download_button(
+                            label=f"📥 TẢI VỀ FILE PDF KẾT QUẢ ({pdf_basename})",
+                            data=pdf_bytes,
+                            file_name=pdf_basename,
+                            mime="application/pdf",
+                            type="primary",
+                            use_container_width=True
+                        )
+                        
+                        # Xem trước PDF
+                        st.markdown("#### 👁️ Xem Trước Bản In PDF Trực Tiếp:")
+                        b64_str = base64.b64encode(pdf_bytes).decode('utf-8')
+                        st.markdown(f'<iframe src="data:application/pdf;base64,{b64_str}" width="100%" height="800" type="application/pdf" style="border-radius: 8px; border: 1px solid #ccc;"></iframe>', unsafe_allow_html=True)
+                        
+                except Exception as ex:
+                    p_bar.progress(1.0)
+                    st.error(f"❌ Xảy ra lỗi trong quá trình xử lý: {str(ex)}")
+                    live_logger(f"LỖI: {str(ex)}")
 
 # ==========================================================
-# TAB 3: DEPLOY GUIDE (ĐƯA LÊN ONLINE)
+# TAB 2: TẢI LẺ TỪNG FILE (NẾU CẦN)
 # ==========================================================
-with tab_guide:
-    st.markdown("### ☁️ HƯỚNG DẪN ĐƯA TOOL LÊN WEB ONLINE")
-    st.write("Dưới đây là 3 giải pháp tốt nhất để đưa Tool MRIR này lên môi trường Web để bất kỳ ai cũng có thể truy cập qua internet:")
+with tab_manual:
+    st.markdown("### 📑 Tải Lên Riêng Lẻ Từng Phần")
+    st.write("Sử dụng khi bạn muốn tải riêng rẽ file Excel và chọn các file PDF thành phần.")
     
-    with st.expander("⭐ CÁCH 1: Chia Sẻ Online Tức Thì Bằng Cloudflare Tunnel (Khuyên dùng - 0đ, Nhanh nhất)", expanded=True):
-        st.markdown("""
-        **Ưu điểm vượt trội:**
-        - **Miễn phí 100%**, không cần mua tên miền, không cần cấu hình router / mở cổng mạng (Port Forwarding).
-        - **Bảo toàn 100% tính năng Microsoft Excel COM** vì ứng dụng chạy trực tiếp trên máy tính Windows của bạn.
-        - Tốc độ xử lý cực nhanh nhờ phần cứng của máy tính.
-        - Nhận ngay một đường link bảo mật HTTPS: `https://xxx.trycloudflare.com` gửi cho đồng nghiệp dùng ngay.
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        manual_excel = st.file_uploader("1. File Excel (.xlsm/.xlsx):", type=["xlsm", "xlsx"], key="m_excel")
+        manual_excel_pdf = st.file_uploader("(Tùy chọn) File PDF xuất từ Excel:", type=["pdf"], key="m_excel_pdf")
+    with col_m2:
+        manual_certs = st.file_uploader("2. Các file PDF chứng chỉ:", type=["pdf"], accept_multiple_files=True, key="m_certs")
         
-        **Các bước thực hiện:**
-        1. Chạy ứng dụng Web trên máy: Nhấp đúp vào file `Chay_Web_MRIR.bat`.
-        2. Tải công cụ Cloudflare Tunnel miễn phí (chỉ cần file `cloudflared.exe` duy nhất).
-        3. Nhấp đúp vào file `Chia_Se_Online_Cloudflare.bat` (đã được tạo sẵn trong thư mục).
-        4. Cửa sổ dòng lệnh sẽ hiển thị đường link public dạng: `https://random-name.trycloudflare.com`.
-        5. Gửi đường link này cho bất kỳ ai qua Zalo, Teams, Email... họ có thể mở trên trình duyệt điện thoại hoặc máy tính để tải file lên và xử lý online!
-        """)
-        
-    with st.expander("🚀 CÁCH 2: Triển Khai Lên Streamlit Community Cloud (Miễn phí 24/7 trên Cloud)"):
-        st.markdown("""
-        **Ưu điểm:** Chạy trực tiếp 24/7 trên đám mây của Streamlit không cần bật máy tính cá nhân.
-        
-        **Lưu ý:** Vì môi trường Cloud chạy hệ điều hành Linux (không có Microsoft Excel bản quyền), bạn có thể:
-        - Sử dụng tính năng tải kèm file PDF xuất từ Excel đã tích hợp sẵn trong giao diện Tab 1.
-        
-        **Các bước triển khai:**
-        1. Đưa toàn bộ thư mục dự án này lên một kho lưu trữ **GitHub** (chế độ Public hoặc Private).
-        2. Truy cập [share.streamlit.io](https://share.streamlit.io) và đăng nhập bằng tài khoản GitHub.
-        3. Nhấn **New app** -> Chọn Repository GitHub của bạn.
-        4. Ở mục **Main file path**, điền: `app_web.py`.
-        5. Nhấn **Deploy**! Sau 2 phút, ứng dụng sẽ có một tên miền riêng (ví dụ: `https://mrir-tool.streamlit.app`).
-        """)
+    btn_manual_run = st.button("🚀 Xử Lý Dữ Liệu Tải Lẻ", type="primary", key="btn_manual")
+    if btn_manual_run:
+        if not manual_excel or not manual_certs:
+            st.error("❌ Vui lòng chọn đầy đủ cả file Excel và ít nhất một file PDF chứng chỉ!")
+        else:
+            m_temp = tempfile.mkdtemp(prefix="mrir_manual_")
+            m_cert_dir = os.path.join(m_temp, "Cert_Manual")
+            os.makedirs(m_cert_dir, exist_ok=True)
+            
+            saved_xl = os.path.join(m_temp, manual_excel.name)
+            with open(saved_xl, "wb") as f:
+                f.write(manual_excel.getbuffer())
+                
+            if manual_excel_pdf:
+                saved_xl_pdf = os.path.splitext(saved_xl)[0] + ".pdf"
+                with open(saved_xl_pdf, "wb") as f:
+                    f.write(manual_excel_pdf.getbuffer())
+                    
+            for cf in manual_certs:
+                with open(os.path.join(m_cert_dir, cf.name), "wb") as f:
+                    f.write(cf.getbuffer())
+                    
+            st.markdown("#### 📝 Tiến trình Xử lý:")
+            m_log_box = st.empty()
+            m_logs = []
+            def m_logger(msg):
+                m_logs.append(msg)
+                m_log_box.markdown(f'<div class="log-box">{"<br>".join(m_logs[-15:])}</div>', unsafe_allow_html=True)
+                
+            m_processor = MRIRBatchProcessor(logger=m_logger)
+            try:
+                m_res = m_processor.process_batch(m_temp, DEFAULT_OUTPUT)
+                st.success("🎉 Xử lý thành công!")
+                with open(m_res, "rb") as mf:
+                    st.download_button(
+                        label=f"📥 Tải về: {os.path.basename(m_res)}",
+                        data=mf.read(),
+                        file_name=os.path.basename(m_res),
+                        mime="application/pdf"
+                    )
+            except Exception as e:
+                st.error(f"Lỗi: {e}")
 
-    with st.expander("🐳 CÁCH 3: Triển Khai Qua Docker Trên VPS / Server Linux Nội Bộ"):
-        st.markdown("""
-        **Dành cho Doanh nghiệp / Quản trị mạng:**
-        Dự án đã chuẩn bị sẵn file `Dockerfile` tích hợp Python 3.11, PyMuPDF, OpenCV, RapidOCR và **LibreOffice headless** (để tự động xuất Excel sang PDF trên Linux).
+# ==========================================================
+# TAB 3: XỬ LÝ THEO THƯ MỤC TRÊN MÁY CHỦ (SERVER FOLDER)
+# ==========================================================
+with tab_server:
+    st.markdown("### 🖥️ Xử Lý Theo Thư Mục Cục Bộ Trên Máy / Server")
+    st.write("Dành cho trường hợp chạy trên máy tính nội bộ hoặc máy chủ có sẵn thư mục `Input`.")
+    
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        s_input = st.text_input("Đường dẫn Thư mục Input:", value=DEFAULT_INPUT)
+    with col_s2:
+        s_output = st.text_input("Đường dẫn Thư mục Output:", value=DEFAULT_OUTPUT)
         
-        **Lệnh build và chạy Docker:**
-        ```bash
-        # 1. Build image Docker
-        docker build -t mrir-web-app .
-
-        # 2. Khởi chạy container trên cổng 8501
-        docker run -d -p 8501:8501 --name mrir-service mrir-web-app
-        ```
-        Truy cập hệ thống tại: `http://<IP-CỦA-SERVER>:8501`.
-        """)
+    s_scan_all = st.checkbox("Tự động quét và chạy TẤT CẢ các thư mục lô hàng con", value=True)
+    btn_server_run = st.button("🚀 Chạy Xử Lý Thư Mục Máy Chủ", key="btn_server", type="primary")
+    
+    if btn_server_run:
+        if not os.path.exists(s_input):
+            st.error(f"Thư mục không tồn tại: {s_input}")
+        else:
+            s_log_box = st.empty()
+            s_logs = []
+            def s_logger(msg):
+                s_logs.append(msg)
+                s_log_box.markdown(f'<div class="log-box">{"<br>".join(s_logs[-15:])}</div>', unsafe_allow_html=True)
+            s_proc = MRIRBatchProcessor(logger=s_logger)
+            try:
+                if s_scan_all:
+                    s_results = s_proc.process_all_batches(s_input, s_output)
+                else:
+                    s_results = [s_proc.process_batch(s_input, s_output)]
+                st.success(f"🎉 Hoàn thành xử lý {len(s_results)} lô hàng!")
+            except Exception as e:
+                st.error(f"Lỗi: {e}")
